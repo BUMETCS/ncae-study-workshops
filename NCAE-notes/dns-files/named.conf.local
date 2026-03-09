@@ -1,0 +1,19 @@
+zone "teamX.ncaecybergames.org" IN {
+        type master;
+        file "/etc/bind/zones/forward.ncaecybergames.org";
+};
+
+zone "18.172.in-addr.arpa" IN {
+        type master;
+        file "/etc/bind/zones/reverse.ncaecybergames.org";
+};
+
+zone "teamX.net" IN {
+        type master;
+        file "/etc/bind/zones/forward.team.net";
+};
+
+zone "X.168.192.in-addr.arpa" IN {
+        type master;
+        file "/etc/bind/zones/reverse.team.net";
+};

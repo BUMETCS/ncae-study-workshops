@@ -1,0 +1,157 @@
+# Creating and restoring from backups
+
+1) On Backup server, create a backup user and backups directory
+
+useradd backup
+passwd backup
+mkdir /backups
+mkdir -p /backups/apache-server/   (for example)
+chown -R backup:backup /backups
+
+2) On each utility server, create a root ssh key, copy over to the backup server backup user
+
+ssh-keygen
+ssh-copy-id backup@backupserver
+
+Test ssh:
+ssh backup@backupserver
+
+create a local backups dicrectory:
+mkdir /backups
+
+# It's important to troll the red team with your new skillz, before they troll you
+
+vim /backups/NOTE-FOR-RED-TEAM.TXT
+
+"You think these are my only backups!!?!?? LOL get outta here with that <3"
+
+3) Two options here:
+
+  a) You can't copy/paste your pre-ready scripts to Rocky/Ubuntu. But you CAN copy it into an Internal Kali box, then scp it over to servers. I recommend this option
+
+  b) Write your own tarball commands/scripts to backup files
+
+4) HINT: If a custom copied-over script fails, it's using hidden Windows syntax from your text editor. run this in the script:
+
+:set fileformat=unix
+:wq
+
+5) Run the network and service backup scripts to store copies locally (once your service is running and network configured) (Hint: they WILL wipe these files eventually on you)
+
+./network-backup.sh
+./backup-apache-files.sh
+
+6) manually rsync files over right away for safety (dont NEED a cronjob but its good practice to have)
+
+rsync -av /backups/* backup@rocky2:/backups/apache-server/
+
+-a archive mode. preserves permissions
+-v verbose 
+
+7) To restore:
+
+From local:
+
+  sudo tar --overwrite -xzf <file-to-restore> -C /
+
+From remote backup server:
+
+  rsync -av backup@rocky2:/backups/apache-server/<file-to-restore> /tmp/
+  tar --overwrite -xzf /tmp/<file-to-restore> -C /
+
+x extract z gzipdded f file
+
+This will leave files like:
+
+apache_server_network_backup
+apache_service_backup
+
+and will store this one version of them both locally and remotely. This is the simplified version
+
+
+# Real life example - Advanced #
+
+In real life, backups will be incremental restore points in case the most recent backup was also corrupted
+
+a) Use timestamps in the tar filenames to track
+
+b) setup cronjobs to automate it
+
+
+1) Use timestamping scripts instead
+
+./network-backup-timestamp.sh
+./backup-apache-files-timestamp.sh
+
+You can automate the latest file also being tagged _LATEST for easier restoring
+
+2) still manually rsync files over right away for safety and to test the cronjob
+
+rsync -av /backups/* backup@rocky2:/backups/apache-server/
+
+3) Set up cronjobs to automate both the backup increments and rsyncing
+
+crontab -e
+
+0,30 * * * * /scripts/network-backup-timestamp.sh
+0,30 * * * * /scripts/backup-apache-files-timestamp.sh
+
+5,35 * * * * rsync -av /backups/* backup@rocky2:/backups/apache-server/
+
+4) To restore:
+
+From local:
+
+  sudo tar --overwrite -xzf <file-to-restore> -C /
+
+From remote backup server:
+
+  rsync -av backup@rocky2:/backups/apache-server/<file-to-restore> /tmp/
+  tar --overwrite -xzf /tmp/<file-to-restore> -C /
+
+# Tip # 
+
+After you restore systemd files, the changes don't take effect until you reload the systemd daemon files
+
+systemctl daemon-reload
+systemctl restart <service>
+
+# Bonus tip #
+
+When a service is down, check:
+
+systemctl status <service> -l
+journalctl -u <service> -r
+less /var/log/messages
+
+(sometimes a mount is required)
+df -h
+check /etc/fstab
+mount -a
+
+# Secure the backup server now #
+
+vim /etc/dnf/dnf.conf
+remove the firewall package exclusions
+dnf install firewalld
+systemctl status firewalld
+
+to view info:
+firewall-cmd --list-all
+firewall-cmd --get-services
+firewall-cmd --get-active-zones
+
+Remove ssh being allowed from everyone:
+
+firewall-cmd --remove-service=ssh --permanent
+
+Allow ssh from only specific IP's
+
+sudo firewall-cmd --add-rich-rule='rule family="ipv4" source address="192.168.1.166" service name="ssh" accept' --permanent
+
+Reload firewall rules
+
+firewall-cmd --reload
+
+Now only those servers can ssh and copy files to/from the backup server. Red Team IP's aren't allowed to even try
+

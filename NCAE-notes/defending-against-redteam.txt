@@ -1,0 +1,96 @@
+# SSH settings and hardening #
+
+systemctl status sshd
+scp also works by using ssh
+
+config files:
+/etc/ssh/
+sshd_config = server side settings 
+ssh_config = client side settings 
+
+port 22 default
+
+Listen x.x.x.x to listen on a specific ip
+
+PermitRootLogin   prohibit-password   Can you ssh in as root 
+PermitRootLogin   no
+
+ssh_host_rsa...
+ssh_host_ecdsa...
+
+~/.ssh   (700 user:user)
+
+Important files:
+known hosts
+authorized_keys
+
+ssh-keygen -t 
+ssh-copy-id
+ssh -i     using a keyfile path
+
+PasswordlessAuthetication
+
+authorized_key  (600 user:user) stores allowed public ssh keys
+
+========================================
+# Possible attacks/reactions to expect #
+
+
+1) Malicious users exist:
+Run 'userdel -r <username>' to delete unwanted users
+
+2) Unwanted users logged in
+w -h
+sudo pkill -KILL -u <username> to terminate unwanted logins
+
+3) Unwanted connections
+netstat -tuna -p | grep ESTABLISHED
+Kill suspicious connections with 'kill -9 <pid>'
+
+4) Unwanted malicious IP assigned
+ip a
+ip addr del <ip> dev <dev name>
+
+5) Automated jobs scheduled to stop services:
+/etc/cron.d/
+/etc/crond
+crontab -e
+/var/spool/cron
+
+6) Immutable flags 
+If a file is tampered with, it might not be editable
+lsattr filename
+check for: ----i--------
+chattr -i filename
+
+7) authorized_keys file
+Scoring ones you need to keep
+redteam keys you should delete
+
+8) Elevated privileges
+/etcsudoers
+/etc/sudoers.d/
+
+use visudo to check for any malicious users having sudo access set. 
+Grant the users you make sudo access and no one else is best
+
+9) SSH tampering
+/etc/ssh/sshd_config
+Disable password authentication, set up your own users and use ssh keys, disable root ssh logins
+
+10) Port tampering
+If your service is up but not reachable as expected, check config file ports. Port forwarding gets enabled, so only those ports will work as expected
+Run netstat -tuna | grep xx to confirm it's listening correctly
+
+11) Config file / binary file tampering
+Always include binary files in your backup, they will attack this often if possible
+If they delete it and your files arent backedup, try'file / -name <name>'. Sometimes they let you recover it from a hidden folder
+
+12) Spam to the terminal
+a) Math function was in roots .bashrc file. Slowed you down by asking math questions before you could type
+b) "All your base are belong to us" was a script in a malicious folder in /
+
+13) Commands / file copy stops working
+  
+
+
